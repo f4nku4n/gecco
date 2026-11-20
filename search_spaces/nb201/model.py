@@ -71,5 +71,4 @@ class TinyNetwork(nn.Module):
             feature = cell(feature)
 
         out = self.lastact(feature)
-        print(out, out.shape)
         return out
