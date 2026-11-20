@@ -52,7 +52,9 @@ def run():
 
     list_genotypes = p.load(open('list_unique_genotypes.p', 'rb'))
     for genotype in list_genotypes:
-        # TODO: check if the genotype has been trained already
+        str_genotype = ''.join([str(g) for g in genotype])
+        if os.path.isfile(f'exp_results/til_splitc10_5/results/{str_genotype}.json'):
+            continue
         model = get_model(genotype=genotype, num_classes=None, taskcla=taskcla)
         model = model.to(DEVICE)
         total_params = sum(param.numel() for param in model.parameters())
