@@ -18,7 +18,7 @@ from utils.general_utils import set_seed, create_TIL_benchmark, NumpyEncoder
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--search_score', choices=('acc', *AVAILABLE_SCORES), default='acc',
+    parser.add_argument('--search_score', '--search_metric', choices=('acc', *AVAILABLE_SCORES), default='acc',
                         help='acc: train and evaluate; otherwise compute the selected zero-cost proxy')
     return parser.parse_args()
 

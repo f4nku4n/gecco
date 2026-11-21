@@ -95,7 +95,8 @@ def compute_zc_score(model, train_loader, search_score, tid, device=None,
                      *, num_batches=1, seed=42, label_map=None):
     """Compute one zero-cost score for the selected task head.
 
-    Labels must be local to that head, or supplied through label_map.
+    SynFlow variants ignore labels. For other scores, labels must be local
+    to the selected head, or supplied through label_map.
     The input model is left unchanged. Returns a Python float.
     """
     return compute_zc_scores(

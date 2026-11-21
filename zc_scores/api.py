@@ -12,6 +12,9 @@ from torch.nn import functional as F
 from .measures import AVAILABLE, implementation
 
 
+_SYNFLOW_METRICS = {'synflow', 'synflow_bn'}
+
+
 def _identity(self, inputs):
     return inputs
 
@@ -24,6 +27,7 @@ def compute_zc_scores(model, dataloader, metrics=('synflow', 'snip', 'nwot'),
     Batches may be (images, labels) or (images, labels, task_ids).
     For TinyNetwork with multiple heads, task_id selects a head by index.
     label_map maps dataset labels to local head labels, e.g. {4: 0, 7: 1}.
+    SynFlow variants use the input shape and ignore labels.
     normalize applies MF-NAS's signed log to synflow and maps nonfinite
     values to -1e8. Set False to inspect raw values (including NaN/Inf).
     Every metric starts from a fresh copy of the supplied weights.
@@ -63,13 +67,15 @@ def compute_zc_scores(model, dataloader, metrics=('synflow', 'snip', 'nwot'),
                     raise ValueError('DataLoader has fewer than num_batches batches') from exc
                 batches.append((batch[0], batch[1]))
             inputs = torch.cat([b[0] for b in batches]).to(device)
-            targets = torch.cat([b[1] for b in batches]).to(device).long()
             if inputs.shape[0] == 0:
                 raise ValueError('Cannot score an empty batch')
-            if label_map is not None:
-                targets = torch.tensor([label_map[int(y)] for y in targets], device=device)
-            if multihead and (targets.min() < 0 or targets.max() >= model.last[task_id].out_features):
-                raise ValueError('Labels must be local to the selected head; supply label_map')
+            targets = None
+            if set(names).difference(_SYNFLOW_METRICS):
+                targets = torch.cat([b[1] for b in batches]).to(device).long()
+                if label_map is not None:
+                    targets = torch.tensor([label_map[int(y)] for y in targets], device=device)
+                if multihead and (targets.min() < 0 or targets.max() >= model.last[task_id].out_features):
+                    raise ValueError('Labels must be local to the selected head; supply label_map')
             if 'zico' in names and inputs.shape[0] < 2:
                 raise ValueError('zico needs at least two samples')
             scores = {}
@@ -86,7 +92,8 @@ def compute_zc_scores(model, dataloader, metrics=('synflow', 'snip', 'nwot'),
                         if isinstance(layer, (nn.BatchNorm1d, nn.BatchNorm2d)):
                             layer.forward = types.MethodType(_identity, layer)
                 try:
-                    value = func(net, inputs.detach().clone(), targets.clone(),
+                    metric_targets = None if name in _SYNFLOW_METRICS else targets.clone()
+                    value = func(net, inputs.detach().clone(), metric_targets,
                                  loss_fn=F.cross_entropy, split_data=1, **kwargs)
                     if isinstance(value, (list, tuple)):
                         value = sum(float(v.detach().sum()) for v in value)
