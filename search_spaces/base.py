@@ -4,11 +4,10 @@ class SearchSpace(ABC):
     def __init__(self, name):
         self.name = name
 
-    def sample(self, genotype=False):
-        network = self._sample()
+    def sample(self, genotype=True):
         if genotype:
-            network = self.encode(network)
-        return network
+            return self.encode(self._sample())
+        return self._sample()
 
     def is_valid(self, network):
         return True

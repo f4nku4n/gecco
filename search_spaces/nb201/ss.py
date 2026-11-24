@@ -52,10 +52,12 @@ class SS_201(SearchSpace):
 if __name__ == '__main__':
     np.random.seed(0)
     ss = SS_201()
-    phenotype = ss.sample()
-    genotype = ss.encode(phenotype)
-    network = ss.get_model(genotype)
-    print('Phenotype:', phenotype)
-    print('Genotype:', genotype)
-    print('Network:', network)
-    # pass
+    genotype = ss.sample()
+    hashX = ''.join([str(x) for x in genotype])
+    print(hashX)
+    # phenotype = ss.decode(genotype)
+    # network = ss.get_model(genotype)
+    # print('Phenotype:', phenotype)
+    # print('Genotype:', genotype)
+    # print('Network:', network)
+    pass
