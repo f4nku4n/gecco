@@ -2,8 +2,6 @@ from algorithm import RandomSearch
 from base import Environment, Evaluator, Problem
 from search_spaces import SS_201
 
-
-
 if __name__ == '__main__':
     device = 'cuda'
     search_space = SS_201()
