@@ -5,7 +5,7 @@ class RandomSearch:
         self.problem = problem  # Search space
         self.evaluator = evaluator  # Fitness evaluator
 
-    def run(self):
+    def do(self):
         list_hashX = []
         best_idv = None
         while self.evaluator.nEvals < self.problem.maxEvals:

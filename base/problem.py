@@ -15,6 +15,8 @@ class Problem:
         self.maxEvals = maxEvals
         self.device = device
 
+        self.setup()
+
     def setup(self):
         benchmark, total_classes = create_TIL_benchmark(benchmark=self.problem_name, resize=False,
                                                         n_experiences=self.nTasks, datadir=self.data_root)

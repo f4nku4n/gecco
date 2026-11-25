@@ -9,8 +9,10 @@ if __name__ == '__main__':
     problem_config = {
         'problem_name': 'SplitCIFAR10',
         'search_space': search_space,
-        'nTask': 5,
-        'data_root': './dataset'
+        'nTasks': 5,
+        'data_root': '/Data/quanphm/datasets',
+        'maxEvals': 10,
+        'device': device
     }
     problem = Problem(**problem_config)
 
@@ -19,7 +21,7 @@ if __name__ == '__main__':
         'problem': problem,
         'optimizer': 'Adam',
         'lr': 1e-3,
-        'list_iepochs': [5] * problem_config['nTask'],
+        'list_iepochs': [5] * problem_config['nTasks'],
         'train_batch_size': 32,
         'val_batch_size': 128,
         'val_ratio': 0.1,

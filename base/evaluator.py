@@ -66,7 +66,6 @@ class Evaluator:
             for batch in val_loader:
                 X, y = batch[:2]  # works for (X, y) and (X, y, task)
                 X, y = X.to(self.device), y.to(self.device)
-
                 logits = model(X, t=tid)
                 # print(classes_of_known_task)
 
@@ -82,6 +81,9 @@ class Evaluator:
         return results
 
     def train_per_task(self, model, train_loader, val_loader, maxEpoch, tid):
+        model = model.to(self.device)
+        model.train()
+
         if self.optimizer == 'Adam':
             optimizer = optim.Adam(model.parameters(), lr=self.lr)
         else:
