@@ -12,7 +12,7 @@ from torch.nn import functional as F
 from .measures import AVAILABLE, implementation
 
 
-_SYNFLOW_METRICS = {'synflow', 'synflow_bn'}
+_LABEL_METRICS = {'grad_norm', 'snip', 'grasp', 'fisher', 'plain', 'epe_nas', 'zico'}
 
 
 def _identity(self, inputs):
@@ -27,7 +27,7 @@ def compute_zc_scores(model, dataloader, metrics=('synflow', 'snip', 'nwot'),
     Batches may be (images, labels) or (images, labels, task_ids).
     For TinyNetwork with multiple heads, task_id selects a head by index.
     label_map maps dataset labels to local head labels, e.g. {4: 0, 7: 1}.
-    SynFlow variants use the input shape and ignore labels.
+    Only metrics that use class labels apply label_map and check label ranges.
     normalize applies MF-NAS's signed log to synflow and maps nonfinite
     values to -1e8. Set False to inspect raw values (including NaN/Inf).
     Every metric starts from a fresh copy of the supplied weights.
@@ -70,7 +70,7 @@ def compute_zc_scores(model, dataloader, metrics=('synflow', 'snip', 'nwot'),
             if inputs.shape[0] == 0:
                 raise ValueError('Cannot score an empty batch')
             targets = None
-            if set(names).difference(_SYNFLOW_METRICS):
+            if _LABEL_METRICS.intersection(names):
                 targets = torch.cat([b[1] for b in batches]).to(device).long()
                 if label_map is not None:
                     targets = torch.tensor([label_map[int(y)] for y in targets], device=device)
@@ -92,7 +92,7 @@ def compute_zc_scores(model, dataloader, metrics=('synflow', 'snip', 'nwot'),
                         if isinstance(layer, (nn.BatchNorm1d, nn.BatchNorm2d)):
                             layer.forward = types.MethodType(_identity, layer)
                 try:
-                    metric_targets = None if name in _SYNFLOW_METRICS else targets.clone()
+                    metric_targets = targets.clone() if name in _LABEL_METRICS else None
                     value = func(net, inputs.detach().clone(), metric_targets,
                                  loss_fn=F.cross_entropy, split_data=1, **kwargs)
                     if isinstance(value, (list, tuple)):

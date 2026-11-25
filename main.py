@@ -66,8 +66,9 @@ def run():
 
     benchmark, total_classes = create_TIL_benchmark(benchmark=BENCHMARK, resize=False, n_experiences=N_EXPERIENCES,
                                                     datadir=DATA_DIR)
-    taskcla = [(cur_tid, len(benchmark.train_stream[cur_tid].classes_in_this_experience)) for cur_tid in
-               range(N_EXPERIENCES)]
+    task_classes = [sorted(experience.classes_in_this_experience) for experience in benchmark.train_stream]
+    taskcla = [(tid, len(classes)) for tid, classes in enumerate(task_classes)]
+    label_maps = [{label: local_id for local_id, label in enumerate(classes)} for classes in task_classes]
 
     with open('list_unique_genotypes.p', 'rb') as fp:
         list_genotypes = p.load(fp)
@@ -125,7 +126,7 @@ def run():
             else:
                 score = compute_zc_score(
                     model, train_loader, search_score=args.search_score,
-                    tid=cur_tid, device=DEVICE, seed=SEED,
+                    tid=cur_tid, device=DEVICE, seed=SEED, label_map=label_maps[cur_tid],
                 )
                 print(f'Task-{cur_tid + 1}: {args.search_score}: {score}')
             info['experiment'][f'Task-{cur_tid + 1}']['search_score'] = args.search_score
