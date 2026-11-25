@@ -42,6 +42,7 @@ if __name__ == '__main__':
         'evaluator': evaluator,
         'fully_train_iepochs': [20] * problem.nTasks,
         'fully_train_seed': seed,
+        'results_dir': 'exp_results',
     }
 
     env = Environment(**env_config)
