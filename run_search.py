@@ -39,9 +39,11 @@ if __name__ == '__main__':
         'search_space': search_space,
         'problem': problem,
         'algorithm': algorithm,
-        'evaluator': evaluator
+        'evaluator': evaluator,
+        'fully_train_iepochs': [20] * problem.nTasks,
+        'fully_train_seed': seed,
     }
 
     env = Environment(**env_config)
     env.setup()
-    env.run()
+    results = env.run()

@@ -70,7 +70,7 @@ class Problem:
                 model=model, dataloader=test_loader, tid=tid,
                 unique_labels=torch.tensor(self.task_classes[tid]),
             )
-            test_accuracy = round(test_results['acc'], 4)
+            test_accuracy = float(test_results['acc'])
             print(f'Test accuracy (task {tid + 1}): {test_accuracy * 100:.2f}%')
             res[f'Task-{tid + 1}'] = test_accuracy
         print('-' * 20)
