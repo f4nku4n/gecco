@@ -52,10 +52,6 @@ class Evaluator:
 
         self.val_ratio = val_ratio
         self.cache = {}
-        if len(self.list_iepochs) != self.problem.nTasks:
-            raise ValueError("list_iepochs must contain one entry per task")
-        if not 0 < self.val_ratio < 1:
-            raise ValueError("val_ratio must be between 0 and 1")
 
     def eval_per_task(self, model, val_loader, tid, unique_labels):
         model.eval()
@@ -71,19 +67,11 @@ class Evaluator:
                 X, y = batch[:2]  # works for (X, y) and (X, y, task)
                 X, y = X.to(self.device), y.to(self.device)
                 logits = model(X, t=tid)
-                # print(classes_of_known_task)
 
-                # if invalid_classes is not None:
-                #     logits[:, invalid_classes] = -float("inf")
-
-                if logits.ndim != 2 or logits.size(1) != unique_labels.numel():
-                    raise ValueError(f"Task {tid}: model output must match the task class count")
                 y_pred = unique_labels[torch.argmax(logits, dim=1)]
                 correct += (y_pred == y).sum().item()
                 total += y.size(0)
 
-        if total == 0:
-            raise ValueError(f"Task {tid}: evaluation dataset is empty")
         acc = correct / total
         results = {'correct': correct, 'total': total, 'acc': acc}
         return results
@@ -166,8 +154,6 @@ class Evaluator:
                     n = len(train_set)
                     indices = rng.permutation(n)
 
-                    if n < 2:
-                        raise ValueError(f"Task {cur_tid}: need at least two samples to split train/validation")
                     val_size = max(1, min(n - 1, int(n * self.val_ratio)))
 
                     val_indices = indices[:val_size]
@@ -205,5 +191,6 @@ class Evaluator:
                 # info['experiment'][f'Task-{cur_tid + 1}']['score'] = score
                 # total_params = sum(param.numel() for param in idv.model.parameters())
                 # info['experiment'][f'Task-{cur_tid + 1}']['total_params'] = total_params
+        print('AIA:', self.cache[idv.hashX]['AIA'])
         idv.F = self.cache[idv.hashX][metric]
         return idv.F
