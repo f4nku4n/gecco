@@ -27,7 +27,7 @@ from . import measure
 @measure("nwot", bn=True)
 def compute_nwot(net, inputs, targets, split_data=1, loss_fn=None):
 
-    batch_size = len(targets)
+    batch_size = inputs.shape[0]
    
     def counting_forward_hook(module, inp, out):
         inp = inp[0].view(inp[0].size(0), -1)

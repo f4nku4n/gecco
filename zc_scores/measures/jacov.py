@@ -28,7 +28,7 @@ import numpy as np
 from . import measure
 
 
-def get_batch_jacobian(net, x, target):
+def get_batch_jacobian(net, x):
     net.zero_grad()
 
     x.requires_grad_(True)
@@ -37,12 +37,10 @@ def get_batch_jacobian(net, x, target):
     if isinstance(y, tuple):
         y = y[0]
     y.backward(torch.ones_like(y))
-    jacob = x.grad.detach()
-
-    return jacob, target.detach()
+    return x.grad.detach()
 
 
-def eval_score(jacob, labels=None):
+def eval_score(jacob):
     corrs = np.corrcoef(jacob)
     v, _ = np.linalg.eig(corrs)
     k = 1e-5
@@ -53,9 +51,9 @@ def eval_score(jacob, labels=None):
 def compute_jacob_cov(net, inputs, targets, split_data=1, loss_fn=None):
     try:
         # Compute gradients (but don't apply them)
-        jacobs, labels = get_batch_jacobian(net, inputs, targets)
+        jacobs = get_batch_jacobian(net, inputs)
         jacobs = jacobs.reshape(jacobs.size(0), -1).cpu().numpy()
-        jc = eval_score(jacobs, labels)
+        jc = eval_score(jacobs)
     except Exception as e:
         print(e)
         jc = np.nan

@@ -32,20 +32,21 @@ def get_score(net, x, target, device, split_data, measure='meco'):
         n = fea.shape[0]
         fea = fea.reshape(fea.shape[0], -1)
         if measure == 'meco':
-            corr = torch.corrcoef(fea)
+            corr = torch.corrcoef(fea).reshape(n, n)
             corr[torch.isnan(corr)] = 0
             corr[torch.isinf(corr)] = 0
             values = torch.linalg.eig(corr)[0]
             # result = np.real(np.min(values)) / np.real(np.max(values))
             result = torch.min(torch.real(values))
         elif measure == 'meco_opt':
-            idxs = random.sample(range(n), 8)
+            sample_size = min(n, 8)
+            idxs = random.sample(range(n), sample_size)
             fea = fea[idxs, :]
-            corr = torch.corrcoef(fea)
+            corr = torch.corrcoef(fea).reshape(sample_size, sample_size)
             corr[torch.isnan(corr)] = 0
             corr[torch.isinf(corr)] = 0
             values = torch.linalg.eig(corr)[0]
-            result = torch.min(torch.real(values)) * n / 8
+            result = torch.min(torch.real(values)) * n / sample_size
         else:
             raise NotImplementedError
         result_list.append(result)
