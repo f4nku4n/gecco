@@ -16,7 +16,7 @@ class RandomSearch:
                 continue
             list_hashX.append(idv.hashX)
             idv.phenotype = self.problem.search_space.decode(idv.X)
-            idv.model = self.problem.search_space.get_model(idv.X)
+            idv.model = self.problem.search_space.get_model(idv.X, taskcla=self.problem.taskcla)
             self.evaluator.evaluate(idv, 'AIA')
 
             if best_idv is None or idv.F > best_idv.F:

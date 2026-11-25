@@ -52,6 +52,10 @@ class Evaluator:
 
         self.val_ratio = val_ratio
         self.cache = {}
+        if len(self.list_iepochs) != self.problem.nTasks:
+            raise ValueError("list_iepochs must contain one entry per task")
+        if not 0 < self.val_ratio < 1:
+            raise ValueError("val_ratio must be between 0 and 1")
 
     def eval_per_task(self, model, val_loader, tid, unique_labels):
         model.eval()
@@ -72,10 +76,14 @@ class Evaluator:
                 # if invalid_classes is not None:
                 #     logits[:, invalid_classes] = -float("inf")
 
+                if logits.ndim != 2 or logits.size(1) != unique_labels.numel():
+                    raise ValueError(f"Task {tid}: model output must match the task class count")
                 y_pred = unique_labels[torch.argmax(logits, dim=1)]
                 correct += (y_pred == y).sum().item()
                 total += y.size(0)
 
+        if total == 0:
+            raise ValueError(f"Task {tid}: evaluation dataset is empty")
         acc = correct / total
         results = {'correct': correct, 'total': total, 'acc': acc}
         return results
@@ -90,8 +98,7 @@ class Evaluator:
             raise ValueError
         criterion = nn.CrossEntropyLoss()
 
-        all_labels = torch.cat([batch[1].reshape(-1).cpu() for batch in train_loader])
-        unique_labels = torch.unique(all_labels, sorted=True)
+        unique_labels = torch.tensor(self.problem.task_classes[tid], dtype=torch.long)
         unique_labels = unique_labels.to(self.device)
 
         val_results = self.eval_per_task(model, val_loader=val_loader, tid=tid, unique_labels=unique_labels)
@@ -106,7 +113,7 @@ class Evaluator:
             total_samples = 0
 
             for batch in train_loader:
-                X, y, _ = batch
+                X, y = batch[:2]
                 X, y = X.to(self.device), y.to(self.device)
                 # Global labels -> Local labels
                 y_mapped = torch.searchsorted(unique_labels, y).long()
@@ -144,7 +151,6 @@ class Evaluator:
     def evaluate(self, idv, metric='AIA'):
         self.nEvals += 1
         if idv.hashX not in self.cache:
-            self.cache[idv.hashX] = {}
             train_stream = self.problem.train_stream
             val_stream = self.problem.val_stream
 
@@ -160,10 +166,14 @@ class Evaluator:
                     n = len(train_set)
                     indices = rng.permutation(n)
 
-                    val_size = int(n * self.val_ratio)
+                    if n < 2:
+                        raise ValueError(f"Task {cur_tid}: need at least two samples to split train/validation")
+                    val_size = max(1, min(n - 1, int(n * self.val_ratio)))
 
                     val_indices = indices[:val_size]
-                    val_set = Subset(train_set.with_transforms("eval"), val_indices)
+                    eval_set = train_set.with_transforms("eval") if hasattr(train_set, "with_transforms") else train_set
+                    val_set = Subset(eval_set, val_indices)
+                    train_set = Subset(train_set, indices[val_size:])
                 else:
                     val_set = val_stream[cur_tid].dataset
 
@@ -181,17 +191,19 @@ class Evaluator:
                 _list_val_accs = []
                 for tid in range(cur_tid + 1):
                     _val_loader = torch.utils.data.DataLoader(list_val_sets[tid], batch_size=self.val_batch_size, shuffle=False)
-                    val_results = self.eval_per_task(idv.model, val_loader=val_loader, tid=cur_tid, unique_labels=None)
+                    val_results = self.eval_per_task(
+                        idv.model, val_loader=_val_loader, tid=tid,
+                        unique_labels=torch.tensor(self.problem.task_classes[tid], dtype=torch.long),
+                    )
                     _list_val_accs.append(float(val_results['acc']))
                 matrix_val_accs.append(_list_val_accs)
                 CL_metrics = compute_cl_metrics(matrix_val_accs)
-                self.cache[idv.hashX] = CL_metrics
+            self.cache[idv.hashX] = CL_metrics
                 # score = float(train_results['best_val_acc'])
                 # print(f'Task-{cur_tid + 1}: Best validation accuracy: {score * 100:.2f}%')
 
                 # info['experiment'][f'Task-{cur_tid + 1}']['score'] = score
                 # total_params = sum(param.numel() for param in idv.model.parameters())
                 # info['experiment'][f'Task-{cur_tid + 1}']['total_params'] = total_params
-            else:
-                CL_metrics = self.cache[idv.hashX]
-            idv.F = CL_metrics[metric]
+        idv.F = self.cache[idv.hashX][metric]
+        return idv.F

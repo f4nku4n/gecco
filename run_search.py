@@ -1,11 +1,13 @@
 from algorithm import RandomSearch
 from base import Environment, Evaluator, Problem
 from search_spaces import SS_201
+from utils.general_utils import set_seed
 
 if __name__ == '__main__':
     device = 'cuda'
     search_space = SS_201()
     seed = 42
+    set_seed(seed)
     problem_config = {
         'problem_name': 'SplitCIFAR10',
         'search_space': search_space,

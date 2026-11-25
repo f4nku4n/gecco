@@ -15,14 +15,16 @@ class Problem:
         self.maxEvals = maxEvals
         self.device = device
 
+        self.task_classes, self.taskcla = None, None
         self.setup()
 
     def setup(self):
         benchmark, total_classes = create_TIL_benchmark(benchmark=self.problem_name, resize=False,
                                                         n_experiences=self.nTasks, datadir=self.data_root)
-        # task_classes = [sorted(experience.classes_in_this_experience) for experience in benchmark.train_stream]
-        # taskcla = [(tid, len(classes)) for tid, classes in enumerate(task_classes)]
-        # label_maps = [{label: local_id for local_id, label in enumerate(classes)} for classes in task_classes]
+        self.task_classes = [sorted(experience.classes_in_this_experience) for experience in benchmark.train_stream]
+        if len(self.task_classes) != self.nTasks:
+            raise ValueError("Benchmark task count does not match nTasks")
+        self.taskcla = [(tid, len(classes)) for tid, classes in enumerate(self.task_classes)]
 
         self.train_stream = benchmark.train_stream
         try:
@@ -46,10 +48,14 @@ class Problem:
                 X, y = X.to(self.device), y.to(self.device)
 
                 logits = model(X, t=tid)
+                if logits.ndim != 2 or logits.size(1) != unique_labels.numel():
+                    raise ValueError(f"Task {tid}: model output must match the task class count")
                 y_pred = unique_labels[torch.argmax(logits, dim=1)]
                 correct += (y_pred == y).sum().item()
                 total += y.size(0)
 
+        if total == 0:
+            raise ValueError(f"Task {tid}: evaluation dataset is empty")
         acc = correct / total
         results = {'correct': correct, 'total': total, 'acc': acc}
         return results
@@ -60,7 +66,10 @@ class Problem:
             test_set = self.test_stream[tid].dataset
             test_loader = torch.utils.data.DataLoader(test_set, batch_size=128, shuffle=False)
 
-            test_results = self.eval_per_task(model=model, dataloader=test_loader, device=self.device, tid=tid)
+            test_results = self.eval_per_task(
+                model=model, dataloader=test_loader, tid=tid,
+                unique_labels=torch.tensor(self.task_classes[tid]),
+            )
             test_accuracy = round(test_results['acc'], 4)
             print(f'Test accuracy (task {tid + 1}): {test_accuracy * 100:.2f}%')
             res[f'Task-{tid + 1}'] = test_accuracy
